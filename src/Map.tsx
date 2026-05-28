@@ -123,6 +123,15 @@ const Map: React.FC = () => {
 
   return (
     <div className="map-container">
+      {/* Dark background + OSM attribution */}
+      <div className="map-background">
+        <div className="osm-attribution">
+          © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
+            OpenStreetMap contributors
+          </a> | Data from OSHA.gov
+        </div>
+      </div>
+
       <div className="controls">
         <h1>🗺️ OSHA Inspection Map</h1>
         <p className="subtitle">{data.length.toLocaleString()} inspections • 20,816 total records</p>
