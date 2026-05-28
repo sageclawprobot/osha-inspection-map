@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DeckGL from '@deck.gl/react';
-import { ScatterplotLayer } from '@deck.gl/layers';
+import { ScatterplotLayer, BitmapLayer } from '@deck.gl/layers';
 import Papa from 'papaparse';
 import './Map.css';
 
@@ -91,6 +91,40 @@ const Map: React.FC = () => {
     }
   };
 
+  // OpenStreetMap tile URLs - generates for current zoom level
+  const generateOSMTiles = () => {
+    const tiles = [];
+    const z = Math.floor(viewState.zoom);
+    const xTile = Math.floor(((viewState.longitude + 180) / 360) * Math.pow(2, z));
+    const yTile = Math.floor(((90 - viewState.latitude) / 180) * Math.pow(2, z));
+    
+    // Generate surrounding tiles
+    for (let x = xTile - 2; x <= xTile + 2; x++) {
+      for (let y = yTile - 2; y <= yTile + 2; y++) {
+        const tileUrl = `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
+        
+        // Convert tile coordinates to Web Mercator
+        const long1 = ((x / Math.pow(2, z)) * 360) - 180;
+        const long2 = (((x + 1) / Math.pow(2, z)) * 360) - 180;
+        
+        const n = Math.PI - (2 * Math.PI * y) / Math.pow(2, z);
+        const lat2 = (180 / Math.PI) * Math.atan(Math.sinh(n));
+        
+        const n2 = Math.PI - (2 * Math.PI * (y + 1)) / Math.pow(2, z);
+        const lat1 = (180 / Math.PI) * Math.atan(Math.sinh(n2));
+        
+        tiles.push(
+          new BitmapLayer({
+            id: `osm-tile-${x}-${y}`,
+            image: tileUrl,
+            bounds: [long1, lat1, long2, lat2],
+          })
+        );
+      }
+    }
+    return tiles;
+  };
+
   const scatterplotLayer = new ScatterplotLayer({
     id: 'scatterplot-layer',
     data: data,
@@ -121,17 +155,11 @@ const Map: React.FC = () => {
   const totalPenalties = data.reduce((sum, r) => sum + (r.Current_Penalty || 0), 0);
   const avgViolations = data.length > 0 ? (totalViolations / data.length).toFixed(1) : 0;
 
+  const osmTiles = generateOSMTiles();
+  const allLayers = [...osmTiles, scatterplotLayer];
+
   return (
     <div className="map-container">
-      {/* Dark background + OSM attribution */}
-      <div className="map-background">
-        <div className="osm-attribution">
-          © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
-            OpenStreetMap contributors
-          </a> | Data from OSHA.gov
-        </div>
-      </div>
-
       <div className="controls">
         <h1>🗺️ OSHA Inspection Map</h1>
         <p className="subtitle">{data.length.toLocaleString()} inspections • 20,816 total records</p>
@@ -179,7 +207,7 @@ const Map: React.FC = () => {
           initialViewState={viewState}
           onViewStateChange={(e: any) => setViewState(e.viewState)}
           controller={true}
-          layers={[scatterplotLayer]}
+          layers={allLayers}
         />
       )}
 
@@ -199,6 +227,10 @@ const Map: React.FC = () => {
           <p>Make sure OSHA_Complete_Dataset_With_Coordinates.csv is in the public folder as data.csv</p>
         </div>
       )}
+
+      <div className="osm-credit">
+        © OpenStreetMap contributors | OSHA Data
+      </div>
     </div>
   );
 };
