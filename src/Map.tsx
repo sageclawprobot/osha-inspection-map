@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DeckGL from '@deck.gl/react';
 import { ScatterplotLayer } from '@deck.gl/layers';
-import Map from 'react-map-gl/maplibre';
 import Papa from 'papaparse';
 import './Map.css';
 
@@ -169,12 +168,8 @@ const Map_Component: React.FC = () => {
           onViewStateChange={(e: any) => setViewState(e.viewState)}
           controller={true}
           layers={[scatterplotLayer]}
-        >
-          <Map
-            reuseMaps
-            mapStyle={MAP_STYLE}
-          />
-        </DeckGL>
+          style={{ backgroundColor: '#1a1a2e' }}
+        />
       )}
 
       {loading && (
