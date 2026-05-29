@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import DeckGL from '@deck.gl/react';
 import { ScatterplotLayer } from '@deck.gl/layers';
 import Map from 'react-map-gl/maplibre';
-import 'maplibre-gl/dist/maplibre-gl.css';
 import Papa from 'papaparse';
+// @ts-ignore: allow importing CSS without type declarations
 import './Map.css';
+import maplibregl from 'maplibre-gl';
+// @ts-ignore: allow importing CSS without type declarations
+import 'maplibre-gl/dist/maplibre-gl.css';
 
 interface InspectionRecord {
   Inspection_ID: string;
@@ -168,10 +171,11 @@ const Map_Component: React.FC = () => {
           controller={true}
           layers={[scatterplotLayer]}
         >
-          <Map
-            reuseMaps
-            mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-          />
+<Map
+  reuseMaps
+  mapLib={maplibregl}
+  mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+/>
         </DeckGL>
       )}
 

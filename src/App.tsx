@@ -1,5 +1,7 @@
 import React from 'react';
 import Map from './Map';
+// @ts-ignore: allow importing CSS without type declarations
+
 import './App.css';
 
 function App() {
