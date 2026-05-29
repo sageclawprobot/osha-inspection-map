@@ -29,9 +29,6 @@ const Map_Component: React.FC = () => {
   const [colorBy, setColorBy] = useState<'violations' | 'penalty'>('violations');
   const [hoveredRecord, setHoveredRecord] = useState<InspectionRecord | null>(null);
 
-  // CartoDB basemap styles - free, smooth performance
-  const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
-
   useEffect(() => {
     fetch('/data.csv')
       .then((response) => response.text())
@@ -168,7 +165,9 @@ const Map_Component: React.FC = () => {
           onViewStateChange={(e: any) => setViewState(e.viewState)}
           controller={true}
           layers={[scatterplotLayer]}
-          style={{ backgroundColor: '#1a1a2e' }}
+          style={{
+            background: 'linear-gradient(135deg, #0f172a 0%, #1a1a3e 50%, #0f172a 100%)',
+          }}
         />
       )}
 
