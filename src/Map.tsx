@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import DeckGL from '@deck.gl/react';
-import { ScatterplotLayer, BitmapLayer } from '@deck.gl/layers';
+import { ScatterplotLayer } from '@deck.gl/layers';
+import Map from 'react-map-gl/maplibre';
 import Papa from 'papaparse';
 import './Map.css';
 
@@ -16,7 +17,7 @@ interface InspectionRecord {
   Longitude: number;
 }
 
-const Map: React.FC = () => {
+const Map_Component: React.FC = () => {
   const [data, setData] = useState<InspectionRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewState, setViewState] = useState({
@@ -29,8 +30,10 @@ const Map: React.FC = () => {
   const [colorBy, setColorBy] = useState<'violations' | 'penalty'>('violations');
   const [hoveredRecord, setHoveredRecord] = useState<InspectionRecord | null>(null);
 
+  // CartoDB basemap styles - free, smooth performance
+  const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+
   useEffect(() => {
-    // Load CSV data
     fetch('/data.csv')
       .then((response) => response.text())
       .then((csvText) => {
@@ -39,7 +42,6 @@ const Map: React.FC = () => {
           skipEmptyLines: true,
           dynamicTyping: false,
           complete: (results: any) => {
-            // Filter out records without coordinates
             const filtered = results.data
               .filter((row: any) => {
                 const lat = parseFloat(row.Latitude);
@@ -71,58 +73,20 @@ const Map: React.FC = () => {
       });
   }, []);
 
-  const getColor = (record: InspectionRecord): number[] => {
+  const getColor = (record: InspectionRecord): [number, number, number] => {
     if (colorBy === 'violations') {
-      // Red intensity by violation count (redder = more violations)
       const violations = record.Total_Violations || 0;
       const intensity = Math.min(violations / 20, 1);
-      const red = 255;
-      const green = Math.max(50, 150 - intensity * 100);
-      const blue = Math.max(50, 100 - intensity * 50);
-      return [red, green, blue, 200];
+      return [255, Math.max(50, 150 - intensity * 100), Math.max(50, 100 - intensity * 50)];
     } else {
-      // Purple intensity by penalty amount
       const penalty = record.Current_Penalty || 0;
       const intensity = Math.min(penalty / 100000, 1);
-      const red = Math.round(100 + intensity * 155);
-      const green = 50;
-      const blue = Math.round(150 + intensity * 105);
-      return [red, green, blue, 200];
+      return [
+        Math.round(100 + intensity * 155),
+        50,
+        Math.round(150 + intensity * 105),
+      ];
     }
-  };
-
-  // OpenStreetMap tile URLs - generates for current zoom level
-  const generateOSMTiles = () => {
-    const tiles = [];
-    const z = Math.floor(viewState.zoom);
-    const xTile = Math.floor(((viewState.longitude + 180) / 360) * Math.pow(2, z));
-    const yTile = Math.floor(((90 - viewState.latitude) / 180) * Math.pow(2, z));
-    
-    // Generate surrounding tiles
-    for (let x = xTile - 2; x <= xTile + 2; x++) {
-      for (let y = yTile - 2; y <= yTile + 2; y++) {
-        const tileUrl = `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
-        
-        // Convert tile coordinates to Web Mercator
-        const long1 = ((x / Math.pow(2, z)) * 360) - 180;
-        const long2 = (((x + 1) / Math.pow(2, z)) * 360) - 180;
-        
-        const n = Math.PI - (2 * Math.PI * y) / Math.pow(2, z);
-        const lat2 = (180 / Math.PI) * Math.atan(Math.sinh(n));
-        
-        const n2 = Math.PI - (2 * Math.PI * (y + 1)) / Math.pow(2, z);
-        const lat1 = (180 / Math.PI) * Math.atan(Math.sinh(n2));
-        
-        tiles.push(
-          new BitmapLayer({
-            id: `osm-tile-${x}-${y}`,
-            image: tileUrl,
-            bounds: [long1, lat1, long2, lat2],
-          })
-        );
-      }
-    }
-    return tiles;
   };
 
   const scatterplotLayer = new ScatterplotLayer({
@@ -141,7 +105,7 @@ const Map: React.FC = () => {
         return Math.max(4, Math.min((d.Current_Penalty || 0) / 5000, 50));
       }
     },
-    getFillColor: (d: InspectionRecord) => getColor(d) as unknown as [number, number, number],
+    getFillColor: (d: InspectionRecord) => getColor(d),
     onHover: (info: any) => {
       if (info.object) {
         setHoveredRecord(info.object as InspectionRecord);
@@ -154,9 +118,6 @@ const Map: React.FC = () => {
   const totalViolations = data.reduce((sum, r) => sum + (r.Total_Violations || 0), 0);
   const totalPenalties = data.reduce((sum, r) => sum + (r.Current_Penalty || 0), 0);
   const avgViolations = data.length > 0 ? (totalViolations / data.length).toFixed(1) : 0;
-
-  const osmTiles = generateOSMTiles();
-  const allLayers = [...osmTiles, scatterplotLayer];
 
   return (
     <div className="map-container">
@@ -207,17 +168,19 @@ const Map: React.FC = () => {
           initialViewState={viewState}
           onViewStateChange={(e: any) => setViewState(e.viewState)}
           controller={true}
-          layers={allLayers}
-        />
+          layers={[scatterplotLayer]}
+        >
+          <Map
+            reuseMaps
+            mapStyle={MAP_STYLE}
+          />
+        </DeckGL>
       )}
 
       {loading && (
         <div className="loading">
           <h2>🗺️ Loading OSHA inspection data...</h2>
           <p>Please ensure data.csv is in the public folder</p>
-          <p style={{ fontSize: '12px', marginTop: '10px', color: '#888' }}>
-            Expected: /public/data.csv with Latitude & Longitude columns
-          </p>
         </div>
       )}
 
@@ -229,10 +192,10 @@ const Map: React.FC = () => {
       )}
 
       <div className="osm-credit">
-        © OpenStreetMap contributors | OSHA Data
+        © CartoDB | © OpenStreetMap contributors | OSHA Data
       </div>
     </div>
   );
 };
 
-export default Map;
+export default Map_Component;
