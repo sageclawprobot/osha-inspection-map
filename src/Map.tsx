@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import DeckGL from '@deck.gl/react';
 import { ScatterplotLayer } from '@deck.gl/layers';
+import Map from 'react-map-gl/maplibre';
 import Papa from 'papaparse';
 import './Map.css';
 
@@ -165,10 +166,12 @@ const Map_Component: React.FC = () => {
           onViewStateChange={(e: any) => setViewState(e.viewState)}
           controller={true}
           layers={[scatterplotLayer]}
-          style={{
-            background: 'linear-gradient(135deg, #0f172a 0%, #1a1a3e 50%, #0f172a 100%)',
-          }}
-        />
+        >
+          <Map
+            reuseMaps
+            mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+          />
+        </DeckGL>
       )}
 
       {loading && (
